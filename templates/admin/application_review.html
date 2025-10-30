@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Application #{{ application.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .risk-low { color: #28a745; }
+        .risk-medium { color: #ffc107; }
+        .risk-high { color: #dc3545; }
+        .verification-card { border-left: 4px solid #007bff; }
+        .document-card { border-left: 4px solid #28a745; }
+        .analysis-card { border-left: 4px solid #6f42c1; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>Review Application</h1>
+                <p class="text-muted mb-0">Application #{{ application.id }} - {{ application.first_name }} {{ application.last_name }}</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left Column - Application Details -->
+            <div class="col-lg-8">
+                <!-- Application Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Application Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> {{ application.first_name }} {{ application.last_name }}</p>
+                                <p><strong>Email:</strong> {{ application.email }}</p>
+                                <p><strong>Phone:</strong> {{ application.user.mobile_number if application.user else 'N/A' }}</p>
+                                <p><strong>PAN:</strong> {{ application.pan_number }}</p>
+                                <p><strong>Aadhar:</strong> {{ application.aadhar_number }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Current Status:</strong> 
+                                    <span class="badge {% if application.status == 'APPROVED' %}bg-success{% elif application.status == 'REJECTED' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ application.status }}
+                                    </span>
+                                </p>
+                                <p><strong>Applied On:</strong> {{ application.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                <p><strong>Monthly Salary:</strong> ₹{{ "{:,.2f}".format(application.monthly_salary) }}</p>
+                                <p><strong>CIBIL Score:</strong> {{ application.cibil_score }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loan Details -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-money-bill-wave"></i> Loan Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Loan Amount:</strong> ₹{{ "{:,.2f}".format(application.loan_amount) }}</p>
+                                <p><strong>Property Valuation:</strong> ₹{{ "{:,.2f}".format(application.property_valuation) }}</p>
+                                <p><strong>LTV Ratio:</strong> {{ "%.1f"|format((application.loan_amount / application.property_valuation) * 100) if application.property_valuation else 0 }}%</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Existing EMI:</strong> ₹{{ "{:,.2f}".format(application.existing_emi) }}</p>
+                                <p><strong>Debt-to-Income:</strong> {{ "%.1f"|format((application.existing_emi / application.monthly_salary) * 100) if application.monthly_salary else 0 }}%</p>
+                                <p><strong>Company:</strong> {{ application.company_name or 'N/A' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Risk Assessment</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <h3 class="{% if application.overall_risk_score <= 25 %}risk-low{% elif application.overall_risk_score <= 50 %}risk-medium{% elif application.overall_risk_score <= 75 %}risk-high{% else %}text-dark{% endif %}">
+                                    {{ "%.1f"|format(application.overall_risk_score) if application.overall_risk_score else 'N/A' }}/100
+                                </h3>
+                                <p class="mb-0"><strong>Overall Risk Score</strong></p>
+                            </div>
+                            <div class="col-md-4">
+                                <h3 class="{% if credit_report.get('risk_score', 50) <= 25 %}risk-low{% elif credit_report.get('risk_score', 50) <= 50 %}risk-medium{% elif credit_report.get('risk_score', 50) <= 75 %}risk-high{% else %}text-dark{% endif %}">
+                                    {{ credit_report.get('risk_score', 'N/A') }}/100
+                                </h3>
+                                <p class="mb-0"><strong>Credit Risk</strong></p>
+                            </div>
+                            <div class="col-md-4">
+                                <h3 class="{% if fraud_report.get('risk_score', 50) <= 25 %}risk-low{% elif fraud_report.get('risk_score', 50) <= 50 %}risk-medium{% elif fraud_report.get('risk_score', 50) <= 75 %}risk-high{% else %}text-dark{% endif %}">
+                                    {{ fraud_report.get('risk_score', 'N/A') }}/100
+                                </h3>
+                                <p class="mb-0"><strong>Fraud Risk</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verification Reports -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Verification Reports</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Employment Verification:</strong> 
+                                    <span class="badge {% if application.employment_verification_status == 'VERIFIED' %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ application.employment_verification_status or 'PENDING' }}
+                                    </span>
+                                </p>
+                                {% if employment_report and employment_report.verification_details %}
+                                <div class="mt-2">
+                                    <small><strong>Details:</strong></small>
+                                    <ul class="small mb-0">
+                                        {% for key, detail in employment_report.verification_details.items() %}
+                                        <li>{{ key|replace('_', ' ')|title }}: {{ detail.note }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Document Verification:</strong> 
+                                    <span class="badge {% if application.document_verification_status == 'VERIFIED' %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ application.document_verification_status or 'PENDING' }}
+                                    </span>
+                                </p>
+                                {% if document_report and document_report.verified_documents %}
+                                <div class="mt-2">
+                                    <small><strong>Documents:</strong></small>
+                                    <ul class="small mb-0">
+                                        {% for doc_type, doc_info in document_report.verified_documents.items() %}
+                                        <li>{{ doc_type|replace('_', ' ')|title }}: 
+                                            <span class="badge {% if doc_info.status == 'VERIFIED' %}bg-success{% else %}bg-warning{% endif %}">
+                                                {{ doc_info.status }}
+                                            </span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Admin Actions -->
+            <div class="col-lg-4">
+                <!-- Decision Form -->
+                <div class="card mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-edit"></i> Make Decision</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="status" class="form-label"><strong>Application Status</strong></label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="PENDING" {% if application.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                    <option value="APPROVED" {% if application.status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                                    <option value="REJECTED" {% if application.status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                                </select>
+                            </div>
+
+                            <!-- Loan terms (show only if approving) -->
+                            <div id="loanTerms" style="display: {% if application.status == 'APPROVED' %}block{% else %}none{% endif %};">
+                                <div class="mb-3">
+                                    <label for="interest_rate" class="form-label">Interest Rate (%)</label>
+                                    <input type="number" class="form-control" id="interest_rate" name="interest_rate" 
+                                           step="0.1" min="5" max="20" value="{{ application.interest_rate or 8.5 }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="loan_term_years" class="form-label">Loan Term (Years)</label>
+                                    <select class="form-select" id="loan_term_years" name="loan_term_years">
+                                        <option value="5" {% if application.loan_term_years == 5 %}selected{% endif %}>5 Years</option>
+                                        <option value="10" {% if application.loan_term_years == 10 %}selected{% endif %}>10 Years</option>
+                                        <option value="15" {% if application.loan_term_years == 15 %}selected{% endif %}>15 Years</option>
+                                        <option value="20" {% if application.loan_term_years == 20 %}selected{% endif %}>20 Years</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="admin_notes" class="form-label">Admin Notes</label>
+                                <textarea class="form-control" id="admin_notes" name="admin_notes" rows="4" 
+                                          placeholder="Add review notes...">{{ application.admin_review_notes or '' }}</textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-save"></i> Update Application
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Quick Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="small">
+                            <p><strong>Risk Level:</strong> 
+                                <span class="badge {% if application.overall_risk_score <= 25 %}bg-success{% elif application.overall_risk_score <= 50 %}bg-warning{% elif application.overall_risk_score <= 75 %}bg-danger{% else %}bg-dark{% endif %}">
+                                    {% if application.overall_risk_score <= 25 %}LOW
+                                    {% elif application.overall_risk_score <= 50 %}MEDIUM
+                                    {% elif application.overall_risk_score <= 75 %}HIGH
+                                    {% else %}VERY HIGH{% endif %}
+                                </span>
+                            </p>
+                            <p><strong>Employment Status:</strong> {{ application.employment_status or 'PENDING' }}</p>
+                            <p><strong>KYC Status:</strong> {{ application.kyc_status or 'PENDING' }}</p>
+                            <p><strong>Documents Uploaded:</strong> {{ application.documents|length }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Show/hide loan terms based on status selection
+        document.getElementById('status').addEventListener('change', function() {
+            const loanTerms = document.getElementById('loanTerms');
+            if (this.value === 'APPROVED') {
+                loanTerms.style.display = 'block';
+            } else {
+                loanTerms.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
